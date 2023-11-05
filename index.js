@@ -26,11 +26,32 @@ async function run() {
     const database = client.db("groupStudyDB");
     const assignmentCollection = database.collection("assignments");
 
+    // assignments related api's
+    app.get("/api/v1/user/assignments", async (req, res) => {
+      try {
+        const difficultyLevel = req.query.difficulty;
+        let query;
+        if (difficultyLevel === "All") {
+          query = {};
+        } else {
+          query = { level: difficultyLevel };
+        }
+        const result = await assignmentCollection.find(query).toArray();
+        res.send(result);
+      } catch (error) {
+        res.send(error.message);
+      }
+    });
+
     app.post("/api/v1/user/assignments", async (req, res) => {
+      try {
         const assignment = req.body;
         const result = await assignmentCollection.insertOne(assignment);
         res.send(result);
-    })
+      } catch (error) {
+        res.send(error.message);
+      }
+    });
 
     await client.db("admin").command({ ping: 1 });
     console.log(
