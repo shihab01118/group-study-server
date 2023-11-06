@@ -116,6 +116,17 @@ app.get("/api/v1/user/submitted_assignments", async (req, res) => {
   res.send(result);
 });
 
+app.get("/api/v1/user/submitted_assignments/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id)};
+    const result = await submittedCollection.findOne(query);
+    res.send(result);
+  } catch (error) {
+    res.send(error.message);
+  }
+});
+
 app.post("/api/v1/user/submitted_assignments", async (req, res) => {
   try {
     const submittedAssignment = req.body;
@@ -124,6 +135,23 @@ app.post("/api/v1/user/submitted_assignments", async (req, res) => {
     res.send(result);
   } catch (error) {
     res.send(error);
+  }
+});
+
+app.patch("/api/v1/user/submitted_assignments/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const filter = { _id: new ObjectId(id)};
+    const assignment = req.body;
+    const updateDoc = {
+      $set: {
+        status: assignment.status,
+      },
+    };
+    const result = await submittedCollection.updateOne(filter, updateDoc);
+    res.send(result);
+  } catch (error) {
+    res.send(error.message);
   }
 });
 
