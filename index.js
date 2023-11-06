@@ -23,60 +23,6 @@ async function run() {
   try {
     await client.connect();
 
-    const database = client.db("groupStudyDB");
-    const assignmentCollection = database.collection("assignments");
-    const submittedCollection = database.collection("submittedAssignments");
-
-    // assignments related api's
-    app.get("/api/v1/user/assignments", async (req, res) => {
-      try {
-        const difficultyLevel = req.query.difficulty;
-        let query;
-        if (difficultyLevel === "All") {
-          query = {};
-        } else {
-          query = { level: difficultyLevel };
-        }
-        const result = await assignmentCollection.find(query).toArray();
-        res.send(result);
-      } catch (error) {
-        res.send(error.message);
-      }
-    });
-
-    app.get("/api/v1/user/assignments/:id", async (req, res) => {
-      try {
-        const id = req.params.id;
-        const query = { _id: new ObjectId(id) };
-        const result = await assignmentCollection.findOne(query);
-        res.send(result);
-      } catch (error) {
-        res.send(error);
-      }
-    });
-
-    app.post("/api/v1/user/assignments", async (req, res) => {
-      try {
-        const assignment = req.body;
-        const result = await assignmentCollection.insertOne(assignment);
-        res.send(result);
-      } catch (error) {
-        res.send(error.message);
-      }
-    });
-
-    // submitted assignments related api's
-    app.post("/api/v1/user/submitted_assignments", async (req, res) => {
-      try {
-        const submittedAssignment = req.body;
-        // res.send(submittedAssignment)
-        const result = await submittedCollection.insertOne(submittedAssignment);
-        res.send(result);
-      } catch (error) {
-        res.send(error);
-      }
-    });
-
     await client.db("admin").command({ ping: 1 });
     console.log(
       "Pinged your deployment. You successfully connected to MongoDB!"
@@ -86,6 +32,71 @@ async function run() {
   }
 }
 run().catch(console.dir);
+
+const database = client.db("groupStudyDB");
+const assignmentCollection = database.collection("assignments");
+const submittedCollection = database.collection("submittedAssignments");
+
+// assignments related api's
+app.get("/api/v1/user/assignments", async (req, res) => {
+  try {
+    const difficultyLevel = req.query.difficulty;
+    let query;
+    if (difficultyLevel === "All") {
+      query = {};
+    } else {
+      query = { level: difficultyLevel };
+    }
+    const result = await assignmentCollection.find(query).toArray();
+    res.send(result);
+  } catch (error) {
+    res.send(error.message);
+  }
+});
+
+app.get("/api/v1/user/assignments/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const result = await assignmentCollection.findOne(query);
+    res.send(result);
+  } catch (error) {
+    res.send(error);
+  }
+});
+
+app.post("/api/v1/user/assignments", async (req, res) => {
+  try {
+    const assignment = req.body;
+    const result = await assignmentCollection.insertOne(assignment);
+    res.send(result);
+  } catch (error) {
+    res.send(error.message);
+  }
+});
+
+app.delete("/api/v1/user/assignments/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const query = { _id: new ObjectId(id) };
+    const result = await assignmentCollection.deleteOne(query);
+    res.send(result);
+  } catch (error) {
+    res.send(error.message);
+  }
+});
+
+// submitted assignments related api's
+app.post("/api/v1/user/submitted_assignments", async (req, res) => {
+  try {
+    const submittedAssignment = req.body;
+    // res.send(submittedAssignment)
+    const result = await submittedCollection.insertOne(submittedAssignment);
+    res.send(result);
+  } catch (error) {
+    res.send(error);
+  }
+});
 
 app.get("/", (req, res) => {
   res.send("valo kore study koro");
