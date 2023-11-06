@@ -25,6 +25,7 @@ async function run() {
 
     const database = client.db("groupStudyDB");
     const assignmentCollection = database.collection("assignments");
+    const submittedCollection = database.collection("submittedAssignments");
 
     // assignments related api's
     app.get("/api/v1/user/assignments", async (req, res) => {
@@ -46,13 +47,13 @@ async function run() {
     app.get("/api/v1/user/assignments/:id", async (req, res) => {
       try {
         const id = req.params.id;
-        const query = {_id: new ObjectId(id)};
+        const query = { _id: new ObjectId(id) };
         const result = await assignmentCollection.findOne(query);
-        res.send(result)
+        res.send(result);
       } catch (error) {
-        res.send(error)
+        res.send(error);
       }
-    })
+    });
 
     app.post("/api/v1/user/assignments", async (req, res) => {
       try {
@@ -61,6 +62,18 @@ async function run() {
         res.send(result);
       } catch (error) {
         res.send(error.message);
+      }
+    });
+
+    // submitted assignments related api's
+    app.post("/api/v1/user/submitted_assignments", async (req, res) => {
+      try {
+        const submittedAssignment = req.body;
+        // res.send(submittedAssignment)
+        const result = await submittedCollection.insertOne(submittedAssignment);
+        res.send(result);
+      } catch (error) {
+        res.send(error);
       }
     });
 
