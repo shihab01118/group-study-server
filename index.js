@@ -78,7 +78,7 @@ app.post("/api/v1/user/assignments", async (req, res) => {
 app.put("/api/v1/user/assignments/:id", async (req, res) => {
   try {
     const id = req.params.id;
-    const filter = { _id: new ObjectId(id)}
+    const filter = { _id: new ObjectId(id) };
     const body = req.body;
     const updatedAssignment = {
       $set: {
@@ -86,7 +86,11 @@ app.put("/api/v1/user/assignments/:id", async (req, res) => {
       },
     };
     const options = { upsert: true };
-    const result = await assignmentCollection.updateOne(filter, updatedAssignment, options)
+    const result = await assignmentCollection.updateOne(
+      filter,
+      updatedAssignment,
+      options
+    );
     res.send(result);
   } catch (error) {
     res.send(error.message);
@@ -105,6 +109,13 @@ app.delete("/api/v1/user/assignments/:id", async (req, res) => {
 });
 
 // submitted assignments related api's
+app.get("/api/v1/user/submitted_assignments", async (req, res) => {
+  const assignmentStatus = req.query.status;
+  const query = { status: assignmentStatus };
+  const result = await submittedCollection.find(query).toArray();
+  res.send(result);
+});
+
 app.post("/api/v1/user/submitted_assignments", async (req, res) => {
   try {
     const submittedAssignment = req.body;
