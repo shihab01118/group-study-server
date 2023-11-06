@@ -75,6 +75,24 @@ app.post("/api/v1/user/assignments", async (req, res) => {
   }
 });
 
+app.put("/api/v1/user/assignments/:id", async (req, res) => {
+  try {
+    const id = req.params.id;
+    const filter = { _id: new ObjectId(id)}
+    const body = req.body;
+    const updatedAssignment = {
+      $set: {
+        ...body,
+      },
+    };
+    const options = { upsert: true };
+    const result = await assignmentCollection.updateOne(filter, updatedAssignment, options)
+    res.send(result);
+  } catch (error) {
+    res.send(error.message);
+  }
+});
+
 app.delete("/api/v1/user/assignments/:id", async (req, res) => {
   try {
     const id = req.params.id;
