@@ -75,14 +75,14 @@ app.get("/api/v1/user/assignments", async (req, res) => {
     const page = parseInt(req.query.page);
     const size = parseInt(req.query.size);
 
-    let query;
     if (difficultyLevel === "All") {
-      query = {};
+      const result = await assignmentCollection.find().skip(page * size).limit(size).toArray();
+      res.send(result);
     } else {
-      query = { level: difficultyLevel };
+      const query = { level: difficultyLevel };
+      const result = await assignmentCollection.find(query).toArray();
+      res.send(result);
     }
-    const result = await assignmentCollection.find(query).skip(page * size).limit(size).toArray();
-    res.send(result);
   } catch (error) {
     res.send(error.message);
   }
@@ -148,7 +148,9 @@ app.delete("/api/v1/user/assignments/:id", async (req, res) => {
 });
 
 // submitted assignments related api's
-app.get("/api/v1/user/submitted_assignments", verifyToken, async (req, res) => {
+app.get("/api/v1/user/submitted_assignments",
+ verifyToken, 
+ async (req, res) => {
   const assignmentStatus = req.query.status;
 
   if (req.user.email !== req.query.email) {
@@ -230,6 +232,7 @@ app.post("/api/v1/auth/jwt", async (req, res) => {
       .cookie("token", token, {
         httpOnly: true,
         secure: true,
+        sameSite: "none"
       })
       .send({ success: true });
   } catch (error) {
