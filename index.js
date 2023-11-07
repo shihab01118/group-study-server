@@ -64,6 +64,8 @@ run().catch(console.dir);
 const database = client.db("groupStudyDB");
 const assignmentCollection = database.collection("assignments");
 const submittedCollection = database.collection("submittedAssignments");
+const featuredCollection = database.collection("featured");
+const faqCollection = database.collection("FAQs");
 
 // assignments related api's
 app.get("/api/v1/user/assignments", async (req, res) => {
@@ -239,6 +241,26 @@ app.post("/api/v1/auth/logout", async (req, res) => {
   const user = req.body;
   res.clearCookie("token", { maxAge: 0 }).send({ success: true });
 });
+
+// featured related api's
+app.get("/api/v1/user/featured", async (req, res) => {
+  try {
+    const result = await featuredCollection.find().toArray();
+    res.send(result);
+  } catch (error) {
+    res.send(error.message)
+  }
+})
+
+// faq related api's
+app.get("/api/v1/user/FAQs", async (req, res) => {
+  try {
+    const result = await faqCollection.find().toArray();
+    res.send(result);
+  } catch (error) {
+    res.send(error.message)
+  }
+})
 
 app.get("/", (req, res) => {
   res.send("valo kore study koro");
