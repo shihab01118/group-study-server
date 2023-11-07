@@ -126,6 +126,16 @@ app.get("/api/v1/user/submitted_assignments/:id", async (req, res) => {
     res.send(error.message);
   }
 });
+app.get("/api/v1/user/user_submitted_assignments/:email", async (req, res) => {
+  try {
+    const userEmail = req.params.email;
+    const query = { examineeEmail: userEmail};
+    const result = await submittedCollection.find(query).toArray();
+    res.send(result);
+  } catch (error) {
+    res.send(error.message);
+  }
+});
 
 app.post("/api/v1/user/submitted_assignments", async (req, res) => {
   try {
@@ -138,14 +148,16 @@ app.post("/api/v1/user/submitted_assignments", async (req, res) => {
   }
 });
 
-app.patch("/api/v1/user/submitted_assignments/:id", async (req, res) => {
+app.put("/api/v1/user/submitted_assignments/:id", async (req, res) => {
   try {
     const id = req.params.id;
     const filter = { _id: new ObjectId(id)};
-    const assignment = req.body;
+    const checkedAssignment = req.body;
     const updateDoc = {
       $set: {
-        status: assignment.status,
+        status: checkedAssignment.status,
+        remark: checkedAssignment.remark,
+        feedback: checkedAssignment.feedback
       },
     };
     const result = await submittedCollection.updateOne(filter, updateDoc);
