@@ -1,12 +1,21 @@
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
+const cookieParser = require("cookie-parser");
 require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 5000;
 
-app.use(cors());
+// parsers
+app.use(
+  cors({
+    origin: ["http://localhost:5173"],
+    credentials: true,
+  })
+);
 app.use(express.json());
+app.use(cookieParser());
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.jcpqyde.mongodb.net/?retryWrites=true&w=majority`;
 
@@ -18,6 +27,21 @@ const client = new MongoClient(uri, {
     deprecationErrors: true,
   },
 });
+
+// middlewares
+const verifyToken = (req,res,next) => {
+  const token = req?.cookies?.token;
+  if (!token) {
+    return res.status(401).send({message: "unAuthorized access"})
+  }
+  jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
+    if(err) {
+      return res.status(401).send({message: "unAuthorized access"})
+    }
+    req.user = decoded;
+    next();
+  })
+}
 
 async function run() {
   try {
@@ -38,9 +62,11 @@ const assignmentCollection = database.collection("assignments");
 const submittedCollection = database.collection("submittedAssignments");
 
 // assignments related api's
-app.get("/api/v1/user/assignments", async (req, res) => {
+app.get("/api/v1/user/assignments", verifyToken, async (req, res) => {
   try {
     const difficultyLevel = req.query.difficulty;
+    // console.log("token owner info: ", req.user);
+    // console.log(req.query.email);
     let query;
     if (difficultyLevel === "All") {
       query = {};
@@ -119,7 +145,7 @@ app.get("/api/v1/user/submitted_assignments", async (req, res) => {
 app.get("/api/v1/user/submitted_assignments/:id", async (req, res) => {
   try {
     const id = req.params.id;
-    const query = { _id: new ObjectId(id)};
+    const query = { _id: new ObjectId(id) };
     const result = await submittedCollection.findOne(query);
     res.send(result);
   } catch (error) {
@@ -129,7 +155,7 @@ app.get("/api/v1/user/submitted_assignments/:id", async (req, res) => {
 app.get("/api/v1/user/user_submitted_assignments/:email", async (req, res) => {
   try {
     const userEmail = req.params.email;
-    const query = { examineeEmail: userEmail};
+    const query = { examineeEmail: userEmail };
     const result = await submittedCollection.find(query).toArray();
     res.send(result);
   } catch (error) {
@@ -151,13 +177,13 @@ app.post("/api/v1/user/submitted_assignments", async (req, res) => {
 app.put("/api/v1/user/submitted_assignments/:id", async (req, res) => {
   try {
     const id = req.params.id;
-    const filter = { _id: new ObjectId(id)};
+    const filter = { _id: new ObjectId(id) };
     const checkedAssignment = req.body;
     const updateDoc = {
       $set: {
         status: checkedAssignment.status,
         remark: checkedAssignment.remark,
-        feedback: checkedAssignment.feedback
+        feedback: checkedAssignment.feedback,
       },
     };
     const result = await submittedCollection.updateOne(filter, updateDoc);
@@ -165,6 +191,29 @@ app.put("/api/v1/user/submitted_assignments/:id", async (req, res) => {
   } catch (error) {
     res.send(error.message);
   }
+});
+
+// auth related api's
+app.post("/api/v1/auth/jwt", async (req, res) => {
+  try {
+    const user = req.body;
+    const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
+      expiresIn: "10h",
+    });
+    res
+      .cookie("token", token, {
+        httpOnly: true,
+        secure: true,
+      })
+      .send({ success: true });
+  } catch (error) {
+    res.send(error.message);
+  }
+});
+
+app.post("/api/v1/auth/logout", async (req, res) => {
+  const user = req.body;
+  res.clearCookie("token", { maxAge: 0 }).send({ success: true });
 });
 
 app.get("/", (req, res) => {
