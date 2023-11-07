@@ -10,7 +10,11 @@ const port = process.env.PORT || 5000;
 // parsers
 app.use(
   cors({
-    origin: ["http://localhost:5173"],
+    origin: [
+      "http://localhost:5173",
+      "https://study-group-83e71.web.app",
+      "https://study-group-83e71.firebaseapp.com/",
+    ],
     credentials: true,
   })
 );
@@ -29,19 +33,19 @@ const client = new MongoClient(uri, {
 });
 
 // middlewares
-const verifyToken = (req,res,next) => {
+const verifyToken = (req, res, next) => {
   const token = req?.cookies?.token;
   if (!token) {
-    return res.status(401).send({message: "unAuthorized access"})
+    return res.status(401).send({ message: "unAuthorized access" });
   }
   jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
-    if(err) {
-      return res.status(401).send({message: "unAuthorized access"})
+    if (err) {
+      return res.status(401).send({ message: "unAuthorized access" });
     }
     req.user = decoded;
     next();
-  })
-}
+  });
+};
 
 async function run() {
   try {
@@ -62,23 +66,30 @@ const assignmentCollection = database.collection("assignments");
 const submittedCollection = database.collection("submittedAssignments");
 
 // assignments related api's
-app.get("/api/v1/user/assignments", verifyToken, async (req, res) => {
+app.get("/api/v1/user/assignments", async (req, res) => {
   try {
     const difficultyLevel = req.query.difficulty;
-    // console.log("token owner info: ", req.user);
-    // console.log(req.query.email);
+    // console.log("pagination query: ", req.query);
+    const page = parseInt(req.query.page);
+    const size = parseInt(req.query.size);
+
     let query;
     if (difficultyLevel === "All") {
       query = {};
     } else {
       query = { level: difficultyLevel };
     }
-    const result = await assignmentCollection.find(query).toArray();
+    const result = await assignmentCollection.find(query).skip(page * size).limit(size).toArray();
     res.send(result);
   } catch (error) {
     res.send(error.message);
   }
 });
+
+app.get("/api/v1/user/assignmentsCount", async (req, res) => {
+  const count = await assignmentCollection.estimatedDocumentCount();
+  res.send({count});
+})
 
 app.get("/api/v1/user/assignments/:id", async (req, res) => {
   try {
@@ -135,8 +146,13 @@ app.delete("/api/v1/user/assignments/:id", async (req, res) => {
 });
 
 // submitted assignments related api's
-app.get("/api/v1/user/submitted_assignments", async (req, res) => {
+app.get("/api/v1/user/submitted_assignments", verifyToken, async (req, res) => {
   const assignmentStatus = req.query.status;
+
+  if (req.user.email !== req.query.email) {
+    return res.status(403).send({message: "forbidden user"})
+  }
+  
   const query = { status: assignmentStatus };
   const result = await submittedCollection.find(query).toArray();
   res.send(result);
@@ -152,9 +168,17 @@ app.get("/api/v1/user/submitted_assignments/:id", async (req, res) => {
     res.send(error.message);
   }
 });
-app.get("/api/v1/user/user_submitted_assignments/:email", async (req, res) => {
+
+app.get("/api/v1/user/user_submitted_assignments/:email",
+ verifyToken,
+  async (req, res) => {
   try {
     const userEmail = req.params.email;
+
+    if (req.user.email !== userEmail) {
+      return res.status(403).send({message: "forbidden user"})
+    }
+
     const query = { examineeEmail: userEmail };
     const result = await submittedCollection.find(query).toArray();
     res.send(result);
