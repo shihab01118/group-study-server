@@ -1,8 +1,8 @@
 const express = require("express");
+require("dotenv").config();
 const cors = require("cors");
 const jwt = require("jsonwebtoken");
 const cookieParser = require("cookie-parser");
-require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
 const port = process.env.PORT || 5000;
@@ -13,7 +13,7 @@ app.use(
     origin: [
       "http://localhost:5173",
       "https://study-group-83e71.web.app",
-      "https://study-group-83e71.firebaseapp.com/",
+      "https://study-group-83e71.firebaseapp.com",
     ],
     credentials: true,
   })
@@ -47,20 +47,6 @@ const verifyToken = (req, res, next) => {
   });
 };
 
-async function run() {
-  try {
-    await client.connect();
-
-    await client.db("admin").command({ ping: 1 });
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    );
-  } finally {
-    // await client.close();
-  }
-}
-run().catch(console.dir);
-
 const database = client.db("groupStudyDB");
 const assignmentCollection = database.collection("assignments");
 const submittedCollection = database.collection("submittedAssignments");
@@ -76,7 +62,11 @@ app.get("/api/v1/user/assignments", async (req, res) => {
     const size = parseInt(req.query.size);
 
     if (difficultyLevel === "All") {
-      const result = await assignmentCollection.find().skip(page * size).limit(size).toArray();
+      const result = await assignmentCollection
+        .find()
+        .skip(page * size)
+        .limit(size)
+        .toArray();
       res.send(result);
     } else {
       const query = { level: difficultyLevel };
@@ -90,8 +80,8 @@ app.get("/api/v1/user/assignments", async (req, res) => {
 
 app.get("/api/v1/user/assignmentsCount", async (req, res) => {
   const count = await assignmentCollection.estimatedDocumentCount();
-  res.send({count});
-})
+  res.send({ count });
+});
 
 app.get("/api/v1/user/assignments/:id", async (req, res) => {
   try {
@@ -148,15 +138,13 @@ app.delete("/api/v1/user/assignments/:id", async (req, res) => {
 });
 
 // submitted assignments related api's
-app.get("/api/v1/user/submitted_assignments",
- verifyToken, 
- async (req, res) => {
+app.get("/api/v1/user/submitted_assignments", verifyToken, async (req, res) => {
   const assignmentStatus = req.query.status;
 
   if (req.user.email !== req.query.email) {
-    return res.status(403).send({message: "forbidden user"})
+    return res.status(403).send({ message: "forbidden user" });
   }
-  
+
   const query = { status: assignmentStatus };
   const result = await submittedCollection.find(query).toArray();
   res.send(result);
@@ -173,23 +161,25 @@ app.get("/api/v1/user/submitted_assignments/:id", async (req, res) => {
   }
 });
 
-app.get("/api/v1/user/user_submitted_assignments/:email",
- verifyToken,
+app.get(
+  "/api/v1/user/user_submitted_assignments/:email",
+  verifyToken,
   async (req, res) => {
-  try {
-    const userEmail = req.params.email;
+    try {
+      const userEmail = req.params.email;
 
-    if (req.user.email !== userEmail) {
-      return res.status(403).send({message: "forbidden user"})
+      if (req.user.email !== userEmail) {
+        return res.status(403).send({ message: "forbidden user" });
+      }
+
+      const query = { examineeEmail: userEmail };
+      const result = await submittedCollection.find(query).toArray();
+      res.send(result);
+    } catch (error) {
+      res.send(error.message);
     }
-
-    const query = { examineeEmail: userEmail };
-    const result = await submittedCollection.find(query).toArray();
-    res.send(result);
-  } catch (error) {
-    res.send(error.message);
   }
-});
+);
 
 app.post("/api/v1/user/submitted_assignments", async (req, res) => {
   try {
@@ -231,8 +221,8 @@ app.post("/api/v1/auth/jwt", async (req, res) => {
     res
       .cookie("token", token, {
         httpOnly: true,
-        secure: true,
-        sameSite: "none"
+        secure: process.env.NODE_ENV === "production",
+        sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
       })
       .send({ success: true });
   } catch (error) {
@@ -242,7 +232,14 @@ app.post("/api/v1/auth/jwt", async (req, res) => {
 
 app.post("/api/v1/auth/logout", async (req, res) => {
   const user = req.body;
-  res.clearCookie("token", { maxAge: 0 }).send({ success: true });
+  res
+    .clearCookie("token", {
+      httpOnly: true,
+      maxAge: 0,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: process.env.NODE_ENV === "production" ? "none" : "strict",
+    })
+    .send({ success: true });
 });
 
 // featured related api's
@@ -251,9 +248,9 @@ app.get("/api/v1/user/featured", async (req, res) => {
     const result = await featuredCollection.find().toArray();
     res.send(result);
   } catch (error) {
-    res.send(error.message)
+    res.send(error.message);
   }
-})
+});
 
 // faq related api's
 app.get("/api/v1/user/FAQs", async (req, res) => {
@@ -261,9 +258,9 @@ app.get("/api/v1/user/FAQs", async (req, res) => {
     const result = await faqCollection.find().toArray();
     res.send(result);
   } catch (error) {
-    res.send(error.message)
+    res.send(error.message);
   }
-})
+});
 
 app.get("/", (req, res) => {
   res.send("valo kore study koro");
